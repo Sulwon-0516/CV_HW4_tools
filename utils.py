@@ -66,7 +66,7 @@ def load_body_kpts(pose_dir: Path):
 
         kpts = []
         for pid in sorted(list(pose['body_keypoints'])):
-            kpt = np.array(pose['body_keypoints'][pid]+pose['foot_keypoints'][pid], dtype=np.float32)
+            kpt = np.array(pose['body_keypoints'][pid], dtype=np.float32)
             kpts.append(kpt)
         
         body_kpts_dict[cam_id] = np.stack(kpts, dtype=np.float32, axis=0) # (N, J, 3)

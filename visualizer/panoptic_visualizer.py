@@ -18,7 +18,32 @@ import viser.extras
 import viser.transforms as tf
 import matplotlib.cm as cm  # For colormap
 
-from utils import get_bones, N_JNTS
+from utils import get_bones, N_JNTS, create_bone_mesh
+
+
+
+def get_bone_mesh(bones, skel, color):
+    vertices = []
+    faces = []
+    n_verts = 0
+    for part_idx, (u, v) in enumerate(bones):
+        if u in skel and v in skel:
+            A = skel[u].reshape(3)
+            B = skel[v].reshape(3)
+            bone_mesh = create_bone_mesh(A, B)
+            
+            vertices.append(bone_mesh.vertices)
+            faces.append(bone_mesh.faces + n_verts)
+            n_verts += bone_mesh.vertices.shape[0]
+            
+    bone_mesh = trimesh.Trimesh(
+        vertices=onp.concatenate(vertices, axis=0),
+        faces=onp.concatenate(faces, axis=0),
+        vertex_colors=color,
+    )
+    
+    return bone_mesh
+
 
 
 
@@ -60,8 +85,6 @@ def main(
         gui_load_hw2_1 = server.gui.add_button("Load HW 2_1", disabled=False)
         gui_viz_hw2_2 = server.gui.add_checkbox("Viz HW 2_2 (n-view)", True, disabled=True)
         gui_load_hw2_2 = server.gui.add_button("Load HW 2_2", disabled=False)
-        # gui_viz_hw2_3 = server.gui.add_checkbox("Viz HW 2_3 (n-view ransac)", True, disabled=True)
-        # gui_load_hw2_3 = server.gui.add_button("Load HW 2_3", disabled=False)
 
     
     @gui_viz_hw2_1.on_update
@@ -72,13 +95,9 @@ def main(
     def _(_) -> None:
         hw2_2_node.visible = gui_viz_hw2_2.value
 
-    # @gui_viz_hw2_3.on_update
-    # def _(_) -> None:
-    #     hw2_3_node.visible = gui_viz_hw2_3.value
 
-    # hw2_1_node = None
-    # hw2_2_node = None
-    # hw2_3_node = None
+    hw2_1_node = None
+    hw2_2_node = None
 
     @gui_load_hw2_1.on_click
     def _(_) -> None:
@@ -86,33 +105,16 @@ def main(
 
         hw2_1_jnts_proposal = onp.load(data_path / 'two_view_triangulated.npy', allow_pickle=True)[()]
 
-        # Add Joints
-        jnts = []
-        colors = []
-        for i in sorted(list(hw2_1_jnts_proposal.keys())):
-            jnt = hw2_1_jnts_proposal[i]
-            jnt = jnt.reshape(-1, 3)
-            jnt = onp.array(jnt, dtype=onp.float32)
-            jnts.append(jnt)
-
-            if n_jnts > 1:
-                norm_i = int(i) / (n_jnts - 1)
-            else:
-                norm_i = 0.0
-            color_rgba = cm.viridis(norm_i)  # Get RGBA color from colormap
-            color_rgb = color_rgba[:3]  # Use RGB components
-            color_rgb = onp.array(color_rgb)
-            color_rgb = onp.repeat(color_rgb[None], jnt.shape[0], axis=0)
-            colors.append(color_rgb)  # Use RGB components
+        color_rgba = cm.viridis(0)  # Get RGBA color from colormap
+        color_rgb = color_rgba[:3]  # Use RGB components
         
-        jnts = onp.concatenate(jnts, axis=0)
-        colors = onp.concatenate(colors, axis=0)
-
-        hw2_1_node = server.scene.add_point_cloud(
-            f"/hw2/2_1",
-            points=jnts,
-            point_size=0.03,
-            colors=colors,
+        bone_mesh = get_bone_mesh(get_bones(), hw2_1_jnts_proposal, color_rgb)
+        
+        hw2_1_node = server.scene.add_mesh_trimesh(
+            name=f"/hw2/2_1_bones",
+            mesh=bone_mesh,
+            wxyz=tf.SO3.from_x_radians(onp.pi * 0).wxyz,
+            position=(0.0, 0.0, 0.0),
         )
         gui_viz_hw2_1.disabled = False
     
@@ -122,75 +124,113 @@ def main(
 
         hw2_2_jnts_proposal = onp.load(data_path / 'N_view_triagulated.npy', allow_pickle=True)[()]
 
-        # Add Joints
-        jnts = []
-        colors = []
-        for i in sorted(list(hw2_2_jnts_proposal.keys())):
-            jnt = hw2_2_jnts_proposal[i]
-            jnt = jnt.reshape(-1, 3)
-            jnt = onp.array(jnt, dtype=onp.float32)
-            jnts.append(jnt)
-
-            if n_jnts > 1:
-                norm_i = int(i) / (n_jnts - 1)
-            else:
-                norm_i = 0.0
-            color_rgba = cm.viridis(norm_i)  # Get RGBA color from colormap
-            color_rgb = color_rgba[:3]  # Use RGB components
-            color_rgb = onp.array(color_rgb)
-            color_rgb = onp.repeat(color_rgb[None], jnt.shape[0], axis=0)
-            colors.append(color_rgb)  # Use RGB components
+        color_rgba = cm.viridis(1)  # Get RGBA color from colormap
+        color_rgb = color_rgba[:3]  # Use RGB components
         
-        jnts = onp.concatenate(jnts, axis=0)
-        colors = onp.concatenate(colors, axis=0)
-
-        hw2_2_node = server.scene.add_point_cloud(
-            f"/hw2/2_2",
-            points=jnts,
-            point_size=0.03,
-            colors=colors,
+        bone_mesh = get_bone_mesh(get_bones(), hw2_2_jnts_proposal, color_rgb)
+        
+        hw2_2_node = server.scene.add_mesh_trimesh(
+            name=f"/hw2/2_2_bones",
+            mesh=bone_mesh,
+            wxyz=tf.SO3.from_x_radians(onp.pi * 0).wxyz,
+            position=(0.0, 0.0, 0.0),
         )
 
         gui_viz_hw2_2.disabled = False
     
-    # @gui_load_hw2_3.on_click
-    # def _(_) -> None:
-    #     nonlocal hw2_3_node
-
-    #     hw2_3_jnts_proposal = onp.load(data_path / 'N_view_with_ransac.npy', allow_pickle=True)[()]
-
-    #     # Add Joints
-    #     jnts = []
-    #     colors = []
-    #     for i in sorted(list(hw2_3_jnts_proposal.keys())):
-    #         jnt = hw2_3_jnts_proposal[i]
-    #         jnt = jnt.reshape(-1, 3)
-    #         jnt = onp.array(jnt, dtype=onp.float32)
-    #         jnts.append(jnt)
-
-    #         if n_jnts > 1:
-    #             norm_i = int(i) / (n_jnts - 1)
-    #         else:
-    #             norm_i = 0.0
-    #         color_rgba = cm.viridis(norm_i)  # Get RGBA color from colormap
-    #         color_rgb = color_rgba[:3]  # Use RGB components
-    #         color_rgb = onp.array(color_rgb)
-    #         color_rgb = onp.repeat(color_rgb[None], jnt.shape[0], axis=0)
-    #         colors.append(color_rgb)  # Use RGB components
-        
-    #     jnts = onp.concatenate(jnts, axis=0)
-    #     colors = onp.concatenate(colors, axis=0)
-
-    #     hw2_3_node = server.scene.add_point_cloud(
-    #         f"/hw2/2_3",
-    #         points=jnts,
-    #         point_size=0.03,
-    #         colors=colors,
-    #     )
-
-    #     gui_viz_hw2_3.disabled = False
     
+    
+    
+    
+    with server.gui.add_folder("HW Par3"):
+        gui_viz_hw3_1 = server.gui.add_checkbox("Viz HW 3_1 (2-view)", True, disabled=True)
+        gui_load_hw3_1 = server.gui.add_button("Load HW 3_1", disabled=False)
+        gui_viz_hw3_2 = server.gui.add_checkbox("Viz HW 3_2 (n-view)", True, disabled=True)
+        gui_load_hw3_2 = server.gui.add_button("Load HW 3_2", disabled=False)
+    
+    hw3_1_node = None
+    hw3_2_node = None
+    
+    bones = get_bones()
+    
+    @gui_viz_hw3_1.on_update
+    def _(_) -> None:
+        hw3_1_node.visible = gui_viz_hw3_1.value
+    
+    @gui_viz_hw3_2.on_update
+    def _(_) -> None:
+        hw3_2_node.visible = gui_viz_hw3_2.value
+
+    @gui_load_hw3_1.on_click
+    def _(_) -> None:
+        nonlocal hw3_1_node
+
+        hw3_1_jnts_proposal = onp.load(data_path / 'two_view_brute.npy', allow_pickle=True)[()]
         
+
+        # Add Joints
+        jnts = []
+        colors = []
+        n_person = len(hw3_1_jnts_proposal)
+        bone_meshes = []
+        for pid in sorted(list(hw3_1_jnts_proposal.keys())):
+            if n_person > 1:
+                norm_i = pid / (n_person - 1)
+            else:
+                norm_i = 0.0
+            
+            color_rgba = cm.viridis(1)  # Get RGBA color from colormap
+            color_rgb = color_rgba[:3]  # Use RGB components
+            
+            bone_mesh = get_bone_mesh(get_bones(), hw3_1_jnts_proposal[pid], color_rgb)
+            bone_meshes.append(bone_mesh)
+            
+        bone_mesh = trimesh.util.concatenate(bone_meshes)
+        
+        hw3_1_node = server.scene.add_mesh_trimesh(
+            name=f"/hw3/3_1_bones",
+            mesh=bone_mesh,
+            wxyz=tf.SO3.from_x_radians(onp.pi * 0).wxyz,
+            position=(0.0, 0.0, 0.0),
+        )
+        gui_viz_hw3_1.disabled = False
+    
+    @gui_load_hw3_2.on_click
+    def _(_) -> None:
+        nonlocal hw3_2_node
+
+        hw3_2_jnts_proposal = onp.load(data_path / 'N_view_brute.npy', allow_pickle=True)[()]
+
+        # Add Joints
+        jnts = []
+        colors = []
+        n_person = len(hw3_2_jnts_proposal)
+        bone_meshes = []
+        for pid in sorted(list(hw3_2_jnts_proposal.keys())):
+            if n_person > 1:
+                norm_i = pid / (n_person - 1)
+            else:
+                norm_i = 0.0
+            
+            color_rgba = cm.viridis(1)  # Get RGBA color from colormap
+            color_rgb = color_rgba[:3]  # Use RGB components
+            
+            bone_mesh = get_bone_mesh(get_bones(), hw3_2_jnts_proposal[pid], color_rgb)
+            bone_meshes.append(bone_mesh)
+            
+        bone_mesh = trimesh.util.concatenate(bone_meshes)
+        
+        hw3_2_node = server.scene.add_mesh_trimesh(
+            name=f"/hw3/3_2_bones",
+            mesh=bone_mesh,
+            wxyz=tf.SO3.from_x_radians(onp.pi * 0).wxyz,
+            position=(0.0, 0.0, 0.0),
+        )
+
+        gui_viz_hw3_2.disabled = False
+    
+    
+    
 
 
     # Add playback UI.
@@ -208,7 +248,7 @@ def main(
         gui_prev_jnts = server.gui.add_button("Prev Jnt", disabled=True)
         gui_show_all_joints = server.gui.add_checkbox("Show all Joints", False, disabled=True)
         gui_load_jnts = server.gui.add_button("Load Joints", disabled=False)
-        # gui_show_smpl = server.gui.add_checkbox("Show smplx", True)
+        
         
 
     # Frame step buttons.
@@ -228,6 +268,11 @@ def main(
     def _(_) -> None:
         nonlocal prev_jnt
         if gui_show_joints.value:
+            gui_jnts.disabled = False
+            gui_next_jnts.disabled = False
+            gui_prev_jnts.disabled = False
+            gui_show_all_joints.disabled = False
+            
             current_jnt = gui_jnts.value
             if not gui_show_all_joints.value:
                 with server.atomic():
@@ -239,6 +284,11 @@ def main(
                         frame_node.visible = True
 
         else:
+            gui_jnts.disabled = True
+            gui_next_jnts.disabled = True
+            gui_prev_jnts.disabled = True
+            gui_show_all_joints.disabled = True
+            
             with server.atomic():
                 for i, frame_node in enumerate(frame_nodes):
                     frame_node.visible = False
@@ -327,6 +377,8 @@ def main(
             gui_next_jnts.disabled = False
             gui_prev_jnts.disabled = False
             gui_show_all_joints.disabled = False
+            
+            gui_show_joints.value = True
 
  
 
@@ -384,6 +436,11 @@ def main(
         nonlocal bone_loaded
         if bone_loaded:
             if gui_show_bones.value:
+                gui_bones.disabled = False
+                gui_next_bones.disabled = False
+                gui_prev_bones.disabled = False
+                gui_show_all_bones.disabled = False
+                
                 current_bone = gui_bones.value
                 if not gui_show_all_bones.value:
                     with server.atomic():
@@ -395,6 +452,11 @@ def main(
                             bone_node.visible = True
 
             else:
+                gui_bones.disabled = True
+                gui_next_bones.disabled = True
+                gui_prev_bones.disabled = True
+                gui_show_all_bones.disabled = True
+                
                 with server.atomic():
                     for i, bone_node in enumerate(bone_nodes):
                         bone_node.visible = False
@@ -495,8 +557,9 @@ def main(
             gui_next_bones.disabled = False
             gui_prev_bones.disabled = False
             gui_show_all_bones.disabled = False
+            
+            gui_show_bones.value = True
 
-                
                 
     # For skeletons
     n_person = 10       # set it as max default
@@ -552,7 +615,12 @@ def main(
         nonlocal skel_loaded
         nonlocal n_person
         if skel_loaded:
-            if gui_show_bones.value:
+            if gui_show_skels.value:
+                gui_skels.disabled = False
+                gui_next_skels.disabled = False
+                gui_prev_skels.disabled = False
+                gui_show_all_skels.disabled = False
+                
                 current_skel= gui_skels.value % n_person
                 if not gui_show_all_skels.value:
                     with server.atomic():
@@ -564,9 +632,15 @@ def main(
                             frame_node.visible = True
 
             else:
+                gui_skels.disabled = True
+                gui_next_skels.disabled = True
+                gui_prev_skels.disabled = True
+                gui_show_all_skels.disabled = True
+                
                 with server.atomic():
                     for i, frame_node in enumerate(skel_nodes):
                         frame_node.visible = False
+                        
         server.flush()  # Optional!
         
 
@@ -668,6 +742,8 @@ def main(
             gui_next_skels.disabled = False
             gui_prev_skels.disabled = False
             gui_show_all_skels.disabled = False
+            
+            gui_show_skels.value = True
             server.flush()  # Optional!
 
             
@@ -753,6 +829,7 @@ def main(
             refined_skel_loaded = True
 
             gui_show_refined_skels.disabled = False
+            gui_show_refined_skels.value = True
             server.flush()  # Optional!
 
     
@@ -868,7 +945,7 @@ def main(
             wxyz=tf.SO3.from_matrix(T_world_camera[:3, :3]).wxyz,
             position=T_world_camera[:3, 3],
             color=color_rgb,  # Set the color for the frustum
-            thickness=cam_thickness,
+            # thickness=cam_thickness,
         )
 
         # Add some axes.
