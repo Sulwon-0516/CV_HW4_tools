@@ -60,8 +60,8 @@ def main(
         gui_load_hw2_1 = server.gui.add_button("Load HW 2_1", disabled=False)
         gui_viz_hw2_2 = server.gui.add_checkbox("Viz HW 2_2 (n-view)", True, disabled=True)
         gui_load_hw2_2 = server.gui.add_button("Load HW 2_2", disabled=False)
-        gui_viz_hw2_3 = server.gui.add_checkbox("Viz HW 2_3 (n-view ransac)", True, disabled=True)
-        gui_load_hw2_3 = server.gui.add_button("Load HW 2_3", disabled=False)
+        # gui_viz_hw2_3 = server.gui.add_checkbox("Viz HW 2_3 (n-view ransac)", True, disabled=True)
+        # gui_load_hw2_3 = server.gui.add_button("Load HW 2_3", disabled=False)
 
     
     @gui_viz_hw2_1.on_update
@@ -72,13 +72,13 @@ def main(
     def _(_) -> None:
         hw2_2_node.visible = gui_viz_hw2_2.value
 
-    @gui_viz_hw2_3.on_update
-    def _(_) -> None:
-        hw2_3_node.visible = gui_viz_hw2_3.value
+    # @gui_viz_hw2_3.on_update
+    # def _(_) -> None:
+    #     hw2_3_node.visible = gui_viz_hw2_3.value
 
-    hw2_1_node = None
-    hw2_2_node = None
-    hw2_3_node = None
+    # hw2_1_node = None
+    # hw2_2_node = None
+    # hw2_3_node = None
 
     @gui_load_hw2_1.on_click
     def _(_) -> None:
@@ -153,42 +153,42 @@ def main(
 
         gui_viz_hw2_2.disabled = False
     
-    @gui_load_hw2_3.on_click
-    def _(_) -> None:
-        nonlocal hw2_3_node
+    # @gui_load_hw2_3.on_click
+    # def _(_) -> None:
+    #     nonlocal hw2_3_node
 
-        hw2_3_jnts_proposal = onp.load(data_path / 'N_view_with_ransac.npy', allow_pickle=True)[()]
+    #     hw2_3_jnts_proposal = onp.load(data_path / 'N_view_with_ransac.npy', allow_pickle=True)[()]
 
-        # Add Joints
-        jnts = []
-        colors = []
-        for i in sorted(list(hw2_3_jnts_proposal.keys())):
-            jnt = hw2_3_jnts_proposal[i]
-            jnt = jnt.reshape(-1, 3)
-            jnt = onp.array(jnt, dtype=onp.float32)
-            jnts.append(jnt)
+    #     # Add Joints
+    #     jnts = []
+    #     colors = []
+    #     for i in sorted(list(hw2_3_jnts_proposal.keys())):
+    #         jnt = hw2_3_jnts_proposal[i]
+    #         jnt = jnt.reshape(-1, 3)
+    #         jnt = onp.array(jnt, dtype=onp.float32)
+    #         jnts.append(jnt)
 
-            if n_jnts > 1:
-                norm_i = int(i) / (n_jnts - 1)
-            else:
-                norm_i = 0.0
-            color_rgba = cm.viridis(norm_i)  # Get RGBA color from colormap
-            color_rgb = color_rgba[:3]  # Use RGB components
-            color_rgb = onp.array(color_rgb)
-            color_rgb = onp.repeat(color_rgb[None], jnt.shape[0], axis=0)
-            colors.append(color_rgb)  # Use RGB components
+    #         if n_jnts > 1:
+    #             norm_i = int(i) / (n_jnts - 1)
+    #         else:
+    #             norm_i = 0.0
+    #         color_rgba = cm.viridis(norm_i)  # Get RGBA color from colormap
+    #         color_rgb = color_rgba[:3]  # Use RGB components
+    #         color_rgb = onp.array(color_rgb)
+    #         color_rgb = onp.repeat(color_rgb[None], jnt.shape[0], axis=0)
+    #         colors.append(color_rgb)  # Use RGB components
         
-        jnts = onp.concatenate(jnts, axis=0)
-        colors = onp.concatenate(colors, axis=0)
+    #     jnts = onp.concatenate(jnts, axis=0)
+    #     colors = onp.concatenate(colors, axis=0)
 
-        hw2_3_node = server.scene.add_point_cloud(
-            f"/hw2/2_3",
-            points=jnts,
-            point_size=0.03,
-            colors=colors,
-        )
+    #     hw2_3_node = server.scene.add_point_cloud(
+    #         f"/hw2/2_3",
+    #         points=jnts,
+    #         point_size=0.03,
+    #         colors=colors,
+    #     )
 
-        gui_viz_hw2_3.disabled = False
+    #     gui_viz_hw2_3.disabled = False
     
         
 
